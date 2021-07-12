@@ -14,8 +14,13 @@ class TasksController extends Controller
      */
     public function index()
     {
-        // タスク一覧を取得
-        $tasks = Task::all();
+        $tasks = [];
+        if (\Auth::check()) { // 認証済みの場合
+            // 認証済みユーザを取得
+            $user = \Auth::user();
+            // タスクの一覧を作成日時の降順で取得
+            $tasks = $user->tasks()->orderBy('created_at', 'desc')->paginate(10);
+        }
 
         // タスク一覧ビューでそれを表示
         return view('tasks.index', [
@@ -56,6 +61,7 @@ class TasksController extends Controller
         $task = new Task;
         $task->content = $request->content;
         $task->status = $request->status;
+        $task->user_id = \Auth::id();
         $task->save();
 
         // トップページへリダイレクトさせる
@@ -72,11 +78,17 @@ class TasksController extends Controller
     {
         // idの値でメッセージを検索して取得
         $task = Task::findOrFail($id);
-
-        // メッセージ詳細ビューでそれを表示
-        return view('tasks.show', [
-            'task' => $task,
-        ]);
+        
+        //タスクを保有しているユーザーかチェック
+        if ($task->user_id == \Auth::id()){
+            // メッセージ詳細ビューでそれを表示
+            return view('tasks.show', [
+                'task' => $task,
+            ]);
+        }else{
+            // トップページへリダイレクトさせる
+            return redirect('/');            
+        }
     }
 
     /**
@@ -90,10 +102,16 @@ class TasksController extends Controller
         // idの値でタスクを検索して取得
         $task = Task::findOrFail($id);
 
-        // タスク編集ビューでそれを表示
-        return view('tasks.edit', [
-            'task' => $task,
-        ]);
+        //タスクを保有しているユーザーかチェック
+        if ($task->user_id == \Auth::id()){
+            // タスク編集ビューでそれを表示
+            return view('tasks.edit', [
+                'task' => $task,
+            ]);
+        }else{
+            // トップページへリダイレクトさせる
+            return redirect('/');
+        }
     }
 
     /**
@@ -113,10 +131,14 @@ class TasksController extends Controller
         
         // idの値でメッセージを検索して取得
         $task = Task::findOrFail($id);
-        // タスクを更新
-        $task->content = $request->content;
-        $task->status = $request->status;
-        $task->save();
+        
+        //タスクを保有しているユーザーかチェック
+        if ($task->user_id == \Auth::id()){
+            // タスクを更新
+            $task->content = $request->content;
+            $task->status = $request->status;
+            $task->save();
+        }
 
         // トップページへリダイレクトさせる
         return redirect('/');
@@ -132,8 +154,12 @@ class TasksController extends Controller
     {
         // idの値でメッセージを検索して取得
         $task = Task::findOrFail($id);
-        // メッセージを削除
-        $task->delete();
+        
+        //タスクを保有しているユーザーかチェック
+        if ($task->user_id == \Auth::id()){
+            // メッセージを削除
+            $task->delete();
+        }
 
         // トップページへリダイレクトさせる
         return redirect('/');
